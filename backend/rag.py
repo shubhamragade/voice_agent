@@ -98,13 +98,18 @@ def retrieve(query: str, k: int = 5) -> List[str]:
         # Langchain FAISS returns L2 distance (lower is better)
         docs_with_scores = vector_store.similarity_search_with_score(query, k=k)
         
-        # Threshold: Distance < 0.6 (empirical value for text-embedding-3-small)
-        # Higher distance = lower similarity
+        # Threshold: Distance < 1.5 (Very permissive to handle misspellings)
+        # GPT-4o will filter irrelevant data via system prompt.
         results = []
         for doc, score in docs_with_scores:
-            if score < 1.0: # Keep chunks with reasonable similarity
+            if score < 1.5: 
                 if doc.page_content.strip():
                     results.append(doc.page_content)
+        
+        if results:
+            logger.info(f"RAG retrieved {len(results)} chunks for query: '{query}'")
+        else:
+            logger.warning(f"RAG found NO relevant chunks for query: '{query}'")
         
         return results
     except Exception as e:

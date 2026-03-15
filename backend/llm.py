@@ -10,7 +10,10 @@ from .rag import retrieve
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are a helpful voice assistant. Keep responses conversational and concise. Respond in 1-3 sentences when possible."""
+SYSTEM_PROMPT = """You are a professional Voice AI Assistant. 
+Your primary goal is to provide accurate information based on the PROVIDED CONTEXT.
+Keep responses conversational, friendly, and concise (1-3 sentences).
+If you find relevant info in the context, use it! If not, answer generally but mention you don't have that specific data in your files."""
 
 from dotenv import load_dotenv
 
@@ -50,8 +53,15 @@ async def llm_worker(session: Session):
                 continue
 
             # RAG Integration
-            # Use a slightly more descriptive query for RAG based on the full grouped transcript
-            context_chunks = retrieve(user_message, k=5)
+            # Use context-aware retrieval: Combine current message with previous user turn 
+            # if current query is short or contains pronouns, to maintain entity context.
+            rag_query = user_message
+            if len(user_message) < 50 and len(session.history) > 2:
+                prev_user_msg = session.history[-2]["content"]
+                rag_query = f"{prev_user_msg} {user_message}"
+                logger.info(f"[{session.session_id}] Using contextual RAG query: {rag_query}")
+
+            context_chunks = retrieve(rag_query, k=5)
             
             # Refine System Prompt to handle STT hallucinations/misrecognitions
             corrected_instruction = """
@@ -63,8 +73,11 @@ async def llm_worker(session: Session):
             
             current_system_prompt = SYSTEM_PROMPT + corrected_instruction
             if context_chunks:
+                logger.info(f"[{session.session_id}] Injecting {len(context_chunks)} RAG chunks into prompt")
                 context_str = "\n".join([f"- {c}" for c in context_chunks])
-                current_system_prompt += f"\n\nRELEVANT DATA FROM KNOWLEDGE BASE:\n{context_str}\n\nUse this data to answer accurately. If the data is irrelevant, ignore it."
+                current_system_prompt += f"\n\nCRITICAL KNOWLEDGE BASE DATA:\n{context_str}\n\nINSTRUCTION: Priority #1 is answering using the data above. If the STT transcript looks like a misspelling of a company or name in this context, correct it and answer."
+            else:
+                logger.warning(f"[{session.session_id}] No RAG context found for this turn.")
             
             # Update system prompt dynamically
             session.history[0] = {"role": "system", "content": current_system_prompt}
