@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+websockets
+python-dotenv
+openai
+deepgram-sdk<4.0.0
+langchain
+langchain-openai
+faiss-cpu
+tiktoken
+numpy
+langchain-community
+langchain-text-splitters
+pypdf
+python-multipart
+docx2txt

@@ -1,0 +1,22 @@
+# .gitignore for Voice AI Assistant
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Local knowledge base cache (if any)
+backend/faiss_index/
+
+# OS files
+.DS_Store
+Thumbs.db

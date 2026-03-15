@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Voice AI Conversation</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --container-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #58a6ff;
+            --user-msg: #21262d;
+            --ai-msg: #1f3a5f;
+            --button-active: #238636;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background-color: var(--container-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            margin: 0 0 10px 0;
+            font-size: 1.8rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: #8b949e;
+            background: #21262d;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #f85149;
+        }
+
+        .status-dot.connected {
+            background-color: #2ea043;
+        }
+
+        .log-container {
+            flex-grow: 1;
+            height: 400px;
+            background-color: #0d1117;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            line-height: 1.4;
+            font-size: 0.95rem;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background-color: var(--user-msg);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai {
+            background-color: var(--ai-msg);
+            align-self: flex-flex-start;
+            border-bottom-left-radius: 4px;
+            color: #fff;
+        }
+
+        .message.system {
+            align-self: center;
+            background: transparent;
+            color: #8b949e;
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        #session-button {
+            background-color: #238636;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #session-button:hover {
+            background-color: #2ea043;
+            transform: translateY(-2px);
+        }
+
+        #session-button:active {
+            background-color: #1a6327;
+            transform: translateY(1px);
+        }
+
+        #session-button.recording {
+            background-color: #da3633;
+            box-shadow: 0 0 15px rgba(218, 54, 51, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(218, 54, 51, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0); }
+        }
+
+        .upload-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #30363d;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .upload-btn:hover {
+            background-color: #30363d;
+            border-color: #8b949e;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Voice AI Assistant</h1>
+            <div class="status-badge">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <div class="log-container" id="log-container">
+            <div class="message system">Click the button below to start a continuous conversation.</div>
+        </div>
+
+        <div class="controls">
+            <button id="session-button">Start Conversation</button>
+        </div>
+
+        <div class="upload-controls">
+            <input type="file" id="file-input" accept=".txt,.pdf,.doc,.docx" multiple>
+            <label for="file-input" class="upload-btn" id="upload-label">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path fill-rule="evenodd" d="M2.75 14A1.75 1.75 0 011 12.25v-2.5a.75.75 0 011.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 00.25-.25v-2.5a.75.75 0 011.5 0v2.5A1.75 1.75 0 0113.25 14H2.75zm8.53-7.28a.75.75 0 00-1.06-1.06l-1.97 1.97V1.75a.75.75 0 00-1.5 0v5.88L4.78 5.66a.75.75 0 00-1.06 1.06l3.25 3.25a.75.75 0 001.06 0l3.25-3.25z"></path>
+                </svg>
+                Upload Knowledge Files
+            </label>
+        </div>
+    </div>
+
+    <!-- UI Interaction Script -->
+    <script>
+        window.logMessage = function(role, text) {
+            const container = document.getElementById('log-container');
+            const msgObj = document.createElement('div');
+            msgObj.classList.add('message');
+            msgObj.classList.add(role);
+            msgObj.innerText = text;
+            container.appendChild(msgObj);
+            container.scrollTop = container.scrollHeight;
+        };
+
+        window.updateStatus = function(connected) {
+            const dot = document.getElementById('status-dot');
+            const txt = document.getElementById('status-text');
+            if (connected) {
+                dot.classList.add('connected');
+                txt.innerText = 'Connected';
+            } else {
+                dot.classList.remove('connected');
+                txt.innerText = 'Disconnected';
+            }
+        };
+
+        window.handleFileUpload = async function(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+
+            window.logMessage('system', `Uploading ${files.length} file(s) to AI memory...`);
+            
+            for (let i = 0; i < files.length; i++) {
+                const formData = new FormData();
+                formData.append('file', files[i]);
+                
+                try {
+                    const response = await fetch('http://localhost:8000/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok) {
+                        window.logMessage('system', `✅ ${result.filename} added to memory.`);
+                    } else {
+                        window.logMessage('system', `❌ Failed: ${result.filename}`);
+                    }
+                } catch (error) {
+                    window.logMessage('system', `❌ Error uploading ${files[i].name}`);
+                }
+            }
+            
+            // clear the input
+            event.target.value = '';
+        };
+
+        document.getElementById('file-input').addEventListener('change', window.handleFileUpload);
+    </script>
+    
+    <script type="module" src="./audio.js?v=2"></script>
+</body>
+</html>
